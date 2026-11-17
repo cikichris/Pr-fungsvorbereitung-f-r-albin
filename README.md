@@ -1,17 +1,30 @@
 # Prüfungsvorbereitung E-Commerce
 
-Lern-App für die Abschlussprüfung **Kaufmann/Kauffrau im E-Commerce** (Umschulung). Grundlage sind Altklausuren, die Aufgabe für Aufgabe eingepflegt werden. Die App ist fürs Handy gebaut und läuft komplett im Browser.
+Lern-App für die Abschlussprüfung **Kaufmann/Kauffrau im E-Commerce** (Umschulung). Grundlage sind Altklausuren mit Musterlösungen. Die App ist fürs Handy gebaut und läuft komplett im Browser.
 
-- **Start:** Stand auf einen Blick, Countdown zur Prüfung, falsche Fragen wiederholen, letzte Ergebnisse.
+## Inhalt
+
+| Fach | Stand |
+|---|---|
+| Geschäftsprozesse im E-Commerce | 13 Klausuren (Sommer 2020 bis 2026), 378 Fragen mit Musterlösung |
+| Kundenkommunikation im E-Commerce | folgt |
+| Wirtschafts- und Sozialkunde | folgt |
+
+Jede Frage ist einem von 16 Themen und einer Aufgabenart zugeordnet (Rechenaufgabe, Auswahlaufgabe, Begriff erklären, fallbezogen anwenden).
+
+## Funktionen
+
+- **Start:** Stand auf einen Blick, die Fächer, Countdown zur Prüfung, falsche Fragen wiederholen, letzte Ergebnisse.
+- **Fach:** gemischt üben, Zufallsprüfung mit 20 Fragen, Klausuren nach Jahren, Themen des Fachs.
 - **Klausuren:** eine Altklausur komplett durchgehen,
-  - als **Prüfung**: alle Fragen beantworten, abgeben, danach Auswertung mit Punkten und IHK-Note, optional mit Zeitlimit,
-  - oder zum **Üben**: Lösung und Erklärung nach jeder Frage.
-- **Themen:** Fragen aus allen Klausuren nach Thema üben (alle, nur neue, nur falsche) oder mit Lösung durchblättern.
-- **Wiederholen:** Jede Frage, die zuletzt falsch oder nur teilweise richtig war, landet hier, bis sie einmal voll richtig beantwortet ist.
-- **Analyse:** Welche Themen und Fragetypen kommen wie oft vor, mit Anteil an den Punkten und in wie vielen Klausuren.
+  - zum **Üben**: Frage lesen, selbst überlegen, Musterlösung aufdecken und einschätzen,
+  - als **Prüfung**: alle Fragen am Stück, Antworten notieren, erst am Ende mit den Musterlösungen vergleichen, optional mit Zeitlimit.
+- **Themen:** Fragen aus allen Klausuren nach Thema üben (alle, nur neue, nur falsche) oder mit Musterlösung durchblättern.
+- **Wiederholen:** Jede Frage, die zuletzt nicht oder nur teilweise gewusst war, landet hier, bis sie einmal voll gewusst ist.
+- **Analyse:** Welche Themen und Aufgabenarten kommen wie oft vor und in wie vielen Klausuren.
 - **Daten:** Prüfungstermin, Sicherung herunterladen und einlesen, Lernstand löschen.
 
-Multiple Choice, Zuordnung, Reihenfolge und Rechenaufgaben wertet die App automatisch aus (wie bei der IHK ganz oder gar nicht). Bei freien Antworten zeigt sie einen Lösungsvorschlag, und man vergibt sich die Punkte selbst.
+**Bewertung:** Die Musterlösungen nennen keine Punkte. Deshalb schätzt man sich nach jeder Frage selbst ein: gewusst, teilweise oder nicht gewusst. Ergebnis und Note sind damit ein Richtwert, jede Frage zählt gleich viel. Für später eingepflegte Aufgaben mit festen Antworten (Multiple Choice, Zuordnung, Reihenfolge, Ergebnisfeld) wertet die App automatisch aus, wie bei der IHK ganz oder gar nicht.
 
 ## Wo liegt was?
 
@@ -42,23 +55,31 @@ Zwei Grenzen: Ein öffentliches Repository ist auf GitHub selbst sichtbar und ka
 ## Neue Klausur einpflegen
 
 1. PDF im Chat hochladen (nicht ins Repository).
-2. Claude legt `content/klausuren/<id>.js` an, zum Beispiel `gp-2024-sommer.js`, und trägt die Datei in `content/index.js` ein.
+2. Claude legt `content/klausuren/<id>.js` an und trägt die Datei in `content/index.js` ein.
 3. Prüfen: `node tools/check-content.mjs`
 4. Pull Request nach `main` mergen.
 
 Die `id` einer Frage darf danach nicht mehr geändert werden. An ihr hängt der gespeicherte Lernstand.
 
+### Musterlösungen aus PDF umwandeln
+
+Die Musterlösungen für Geschäftsprozesse wurden mit den Skripten in [`tools/import/`](tools/import/) übernommen:
+
+- `parse_pdf.py` liest Fragen, Absätze, Aufzählungen, Tabellen und Fettdruck aus der PDF (`python3 parse_pdf.py <pdf> <json>`, braucht `pdfplumber`).
+- `gen.py` erzeugt daraus die Klausurdateien. Was in der Lösung unter „Gegeben:“ steht, wandert in die Frage.
+- `themes.py` ordnet Themen über Stichwörter zu und erkennt die Aufgabenart. `overrides.py` enthält die Korrekturen von Hand und die Abschriften der Formelbilder.
+
 ### Aufbau einer Klausurdatei
 
-Ein vollständiges Beispiel mit allen Fragetypen steht in [`content/klausuren/beispiel.js`](content/klausuren/beispiel.js).
 
 ```js
 export default {
   id: 'gp-2024-sommer',          // a-z, 0-9, -
-  titel: 'Geschäftsprozesse Sommer 2024',
-  bereich: 'gp',                 // siehe content/themen.js
-  termin: 'Sommer 2024',
-  dauer: 150,                    // Minuten, Vorschlag fürs Zeitlimit
+  titel: 'Sommer 2024',
+  bereich: 'gp',                 // Fach, siehe content/themen.js
+  sortierung: 2024.0,            // Sommer = Jahr, Winter = Jahr + 0,5
+  quelle: 'Musterlösung',        // optional
+  dauer: 150,                    // Minuten, Vorschlag fürs Zeitlimit (optional)
   situation: '…',                // Ausgangssituation der ganzen Prüfung (optional)
   anlagen: [{ titel: 'Anlage 1', text: '…' }],   // optional
   aufgaben: [
@@ -70,7 +91,7 @@ export default {
 };
 ```
 
-Jede Frage hat `id` (beginnt mit der Klausur-id), `nr`, `typ`, `thema` (eine id oder eine Liste), `punkte`, `frage` und meist eine `erklaerung`. Dazu je nach Typ:
+Jede Frage hat `id` (beginnt mit der Klausur-id), `nr`, `typ`, `thema` (eine id oder eine Liste), `art` (`rechnen`, `auswahl`, `erklaeren`, `anwenden`), `frage` und optional `punkte` und `erklaerung`. Ohne `punkte` bewertet man sich mit gewusst / teilweise / nicht gewusst. Dazu je nach Typ:
 
 | typ | Felder | Auswertung |
 |---|---|---|
@@ -78,11 +99,11 @@ Jede Frage hat `id` (beginnt mit der Klausur-id), `nr`, `typ`, `thema` (eine id 
 | `zuordnung` | `optionen: [...]`, `aussagen: [{ text, richtig: 2 }]` | automatisch |
 | `reihenfolge` | `schritte: [{ text, pos: 3 }]` in der Reihenfolge der Prüfung | automatisch |
 | `zahl` | `ergebnis: 184.8`, `einheit: '€'`, `toleranz: 0.01` | automatisch |
-| `offen` | `loesung: '…'` (Lösungsvorschlag) | Selbstbewertung in Punkten |
+| `offen` | `loesung: '…'` (Musterlösung) | Selbstbewertung |
 
-Texte können Absätze, Listen (`- `), Tabellen mit `|` sowie `**fett**` enthalten.
+Texte können Absätze, Listen (`- `), Tabellen mit `|`, Rechenblöcke (`> `) sowie `**fett**` enthalten.
 
-Prüfungsbereiche und Themen stehen in [`content/themen.js`](content/themen.js). Neue Themen dort ergänzen. Die Analyse zählt nur echte Klausuren. Die Beispielklausur kann gelöscht werden, sobald welche eingepflegt sind.
+Fächer, Themen und Aufgabenarten stehen in [`content/themen.js`](content/themen.js). Neue Themen dort ergänzen.
 
 ## Entwicklung
 

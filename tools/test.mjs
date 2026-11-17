@@ -131,7 +131,7 @@ test('Lernstand: falsche Fragen, Sicherung und Zusammenführen', () => {
   assert.throws(() => store.importData('kein json'), /kein JSON/);
 });
 
-test('Beispielklausur: jede Musterlösung ergibt volle Punkte', () => {
+test('Klausuren: gebundene Aufgaben ergeben mit der Lösung volle Punkte', () => {
   for (const q of fragen) {
     if (q.typ === 'offen') continue;
     let a;
@@ -141,4 +141,20 @@ test('Beispielklausur: jede Musterlösung ergibt volle Punkte', () => {
     if (q.typ === 'zahl') a = String(q.ergebnis).replace('.', ',');
     assert.equal(grade(q, a), 1, q.id);
   }
+});
+
+test('Klausuren: jede Frage hat Musterlösung, Thema und Aufgabenart', () => {
+  assert.ok(fragen.length > 300);
+  for (const q of fragen) {
+    assert.ok(q.loesung && q.loesung.length > 10, q.id);
+    assert.ok(q.themen.length, q.id);
+    assert.ok(q.art, q.id);
+  }
+});
+
+test('Text: Rechenblöcke, Tabellen, Listen', async () => {
+  const { fmt } = await import('../js/render.js');
+  assert.equal(fmt('a\n\n> x = 1\n> y = 2'), '<p>a</p><div class="calc">x = 1<br>y = 2</div>');
+  assert.match(fmt('| A | B |\n|---|---|\n| 1 | **2 €** |'), /<th>A<\/th>.*<td class="is-num"><strong>2 €<\/strong><\/td>/);
+  assert.equal(fmt('- a\n- b'), '<ul><li>a</li><li>b</li></ul>');
 });

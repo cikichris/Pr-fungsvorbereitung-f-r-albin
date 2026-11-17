@@ -3,7 +3,7 @@
 //
 //   node tools/check-content.mjs
 import { KLAUSUREN } from '../content/index.js';
-import { BEREICHE, THEMEN, TYPEN } from '../content/themen.js';
+import { BEREICHE, THEMEN, TYPEN, ARTEN } from '../content/themen.js';
 
 const errors = [];
 const warnings = [];
@@ -33,6 +33,7 @@ for (const k of KLAUSUREN) {
   if (klausurIds.has(k.id)) errors.push(`${kw}: Klausur-id doppelt`);
   klausurIds.add(k.id);
   if (!bereiche.has(k.bereich)) errors.push(`${kw}: unbekannter bereich "${k.bereich}"`);
+  if (k.sortierung !== undefined && typeof k.sortierung !== 'number') errors.push(`${kw}: sortierung muss eine Zahl sein (z. B. 2024.5 für Winter 2024/25)`);
   if (k.dauer !== undefined && !(Number.isInteger(k.dauer) && k.dauer > 0)) errors.push(`${kw}: dauer muss eine ganze Zahl (Minuten) sein`);
   checkText(`${kw}.situation`, k.situation);
   for (const [i, a] of (k.anlagen || []).entries()) {
@@ -56,6 +57,7 @@ for (const k of KLAUSUREN) {
       frageIds.add(f.id);
       if (!f.nr) errors.push(`${w}: nr fehlt`);
       if (!TYPEN[f.typ]) errors.push(`${w}: unbekannter typ "${f.typ}"`);
+      if (f.art !== undefined && !ARTEN[f.art]) errors.push(`${w}: unbekannte art "${f.art}"`);
       if (!isText(f.frage)) errors.push(`${w}: frage fehlt`);
       checkText(`${w}.frage`, f.frage);
       checkText(`${w}.erklaerung`, f.erklaerung);
@@ -106,4 +108,4 @@ if (errors.length) {
   console.error(`${errors.length} Fehler:\n${errors.map((e) => `  - ${e}`).join('\n')}`);
   process.exit(1);
 }
-console.log(`OK: ${counts.klausuren} Klausuren, ${counts.fragen} Fragen, ${counts.punkte} Punkte.`);
+console.log(`OK: ${counts.klausuren} Klausuren, ${counts.fragen} Fragen.`);

@@ -15,10 +15,10 @@
 // =====================================================================
 import * as store from './store.js';
 import {
-  klausuren, fragen, frageById, klausurById, themaById, bereichById,
-  TYPEN, themaName, fragenIn, bereicheMitInhalt,
+  klausuren, fragen, frageById, klausurById, themaById, bereichById, BEREICHE,
+  TYPEN, ARTEN, ARTEN_INFO, themaName, fragenIn, bereicheMitInhalt, klausurLabel, klausurenIn,
 } from './content.js';
-import { grade, isAnswered, isTouched, rowCorrect, formatNumber, note, pts } from './grade.js';
+import { grade, isAnswered, isTouched, rowCorrect, formatNumber, note, pts, hatPunkte } from './grade.js';
 import { analyse, progress } from './stats.js';
 import { fmt, esc, firstLine } from './render.js';
 
@@ -123,7 +123,6 @@ function bereichChips() {
   return `<div class="chip-row">${chip('', 'Alle')}${list.map((b) => chip(b.id, b.kurz)).join('')}</div>`;
 }
 
-const echteKlausuren = () => klausuren.filter((k) => !k.beispiel);
 
 // ---------------------------------------------------------------------
 //  Eine Frage darstellen
@@ -156,9 +155,9 @@ function contextHtml(q, mode) {
 function questionHead(q, o) {
   const themen = q.themen.map((t) => `<a class="q-thema" href="#/themen/${t}">${esc(themaName(t))}</a>`).join('');
   return `<header class="q-head">
-    <span class="q-nr">${o.source ? `${esc(q.klausur.titel)} · ` : ''}${esc(q.nr)}</span>
-    <span class="badge badge-${q.typ}">${TYPEN[q.typ]}</span>
-    <span class="q-pts">${plural(pts(q), 'Punkt', 'Punkte')}</span>
+    <span class="q-nr">${o.source ? `${esc(klausurLabel(q.klausur))} · ` : ''}Aufgabe ${esc(q.nr)}</span>
+    ${q.art ? `<span class="badge badge-${q.art}">${ARTEN[q.art]}</span>` : `<span class="badge badge-${q.typ}">${TYPEN[q.typ]}</span>`}
+    ${hatPunkte(q) ? `<span class="q-pts">${plural(pts(q), 'Punkt', 'Punkte')}</span>` : ''}
     <span class="q-themen">${themen}</span>
   </header>`;
 }
@@ -226,18 +225,21 @@ function offenHtml(q, ans, o) {
   const val = typeof ans === 'string' ? ans : '';
   let html = '';
   if (o.interactive) {
-    html += `<textarea data-input="offen" rows="6" placeholder="Deine Antwort (Stichpunkte reichen)">${esc(val)}</textarea>`;
+    html += `<textarea data-input="offen" rows="4" placeholder="Deine Antwort, optional (Stichpunkte reichen)">${esc(val)}</textarea>`;
   } else if (val.trim()) {
     html += `<div class="own-answer"><span class="label">Deine Antwort</span>${fmt(val)}</div>`;
-  } else if (o.reveal) {
-    html += '<p class="muted small">Keine Antwort aufgeschrieben.</p>';
   }
-  if (o.reveal) html += `<div class="loesung"><span class="label">Lösungsvorschlag</span>${fmt(q.loesung)}</div>`;
+  if (o.reveal) html += `<div class="loesung"><span class="label">${q.klausur.quelle === 'Musterlösung' ? 'Musterlösung' : 'Lösungsvorschlag'}</span>${fmt(q.loesung)}</div>`;
   return html;
 }
 
 function verdictHtml(q, score) {
   if (score === undefined || score === null) return '';
+  if (!hatPunkte(q)) {
+    if (score >= 1) return '<p class="verdict verdict-ok">Gewusst</p>';
+    if (score > 0) return '<p class="verdict verdict-part">Teilweise gewusst</p>';
+    return '<p class="verdict verdict-bad">Nicht gewusst</p>';
+  }
   const got = pointsText(score * pts(q));
   if (score >= 1) return `<p class="verdict verdict-ok">Richtig · ${got} von ${pointsText(pts(q))} Punkten</p>`;
   if (score > 0) return `<p class="verdict verdict-part">Teilweise richtig · ${got} von ${pointsText(pts(q))} Punkten</p>`;
@@ -260,6 +262,14 @@ function questionHtml(q, ans, o = {}) {
 }
 
 function pointButtons(q) {
+  if (!hatPunkte(q)) {
+    return `<p class="rating-q">Vergleiche mit der Musterlösung: Wie gut wusstest du es?</p>
+      <div class="points self">
+        <button class="pt pt-0" data-action="selfrate" data-p="0">Nicht gewusst</button>
+        <button class="pt" data-action="selfrate" data-p="0.5">Teilweise</button>
+        <button class="pt pt-max" data-action="selfrate" data-p="1">Gewusst</button>
+      </div>`;
+  }
   const max = pts(q);
   const steps = [];
   for (let p = 0; p <= max; p += 1) steps.push(p);
@@ -578,7 +588,7 @@ function resumePanel() {
 
 function runRow(r) {
   const pct = r.max ? r.punkte / r.max : 0;
-  const label = r.kind === 'klausur' ? (r.mode === 'pruefung' ? 'Prüfung' : 'Klausur geübt') : r.kind === 'wdh' ? 'Wiederholung' : 'Übung';
+  const label = r.mode === 'pruefung' ? 'Prüfung' : r.kind === 'klausur' ? 'Klausur geübt' : r.kind === 'wdh' ? 'Wiederholung' : 'Übung';
   return `<a class="list-row" href="#/ergebnis/${r.id}">
     <span class="list-main"><strong>${esc(r.titel)}</strong><small>${label} · ${dateTimeText(r.end)} · ${plural(r.qids.length, 'Frage', 'Fragen')}</small></span>
     <span class="score-pill ${scoreClass(pct)}">${pctText(pct)}</span>
@@ -587,10 +597,29 @@ function runRow(r) {
 
 const scoreClass = (pct) => (pct >= 0.67 ? 'is-ok' : pct >= 0.5 ? 'is-part' : 'is-bad');
 
+function fachCard(b) {
+  const ks = klausurenIn(b.id);
+  if (!ks.length) {
+    return `<div class="fach fach-empty">
+      <span class="fach-name">${esc(b.name)}</span>
+      <span class="fach-meta">Kommt bald</span>
+    </div>`;
+  }
+  const qs = fragenIn(b.id);
+  const p = progress(qs, store.last);
+  return `<a class="fach" href="#/fach/${b.id}">
+    <span class="fach-name">${esc(b.name)}</span>
+    <span class="fach-meta">${plural(ks.length, 'Klausur', 'Klausuren')} · ${plural(qs.length, 'Frage', 'Fragen')} · ${p.bearbeitet} bearbeitet</span>
+    ${progressBar(p)}
+    <span class="go">›</span>
+  </a>`;
+}
+
 function renderHome() {
   const c = progress(fragen, store.last);
   const wrong = wrongQuestions();
   const runs = store.runs().slice(0, 5);
+  const mehrereFaecher = bereicheMitInhalt().length > 1;
   const themen = themaProgress('').filter((t) => t.p.bearbeitet >= 2 && t.p.quote !== null)
     .sort((a, b) => a.p.quote - b.p.quote).slice(0, 3);
 
@@ -604,15 +633,17 @@ function renderHome() {
     ${backupNudge()}
     <div class="tiles">
       <div><strong>${c.bearbeitet}<small> / ${c.total}</small></strong><span>Fragen bearbeitet</span></div>
-      <div><strong>${c.quote === null ? '–' : pctText(c.quote)}</strong><span>Punkte zuletzt erreicht</span></div>
+      <div><strong>${c.quote === null ? '–' : pctText(c.quote)}</strong><span>zuletzt gewusst</span></div>
       <a href="#/wiederholen"><strong>${wrong.length}</strong><span>zum Wiederholen</span></a>
     </div>
-    <div class="start-actions">
-      ${wrong.length ? `<button class="btn btn-primary btn-wide" data-action="start-wdh">Falsche Fragen wiederholen (${wrong.length})</button>` : ''}
-      <a class="go-row" href="#/klausuren"><span><strong>Altklausur schreiben</strong><small>${plural(echteKlausuren().length || klausuren.length, 'Klausur', 'Klausuren')}, mit oder ohne Zeitlimit</small></span><span class="go">›</span></a>
-      <a class="go-row" href="#/themen"><span><strong>Nach Themen üben</strong><small>Fragen aus allen Klausuren zu einem Thema</small></span><span class="go">›</span></a>
-      <a class="go-row" href="#/analyse"><span><strong>Was kommt oft dran?</strong><small>Themen und Fragetypen nach Häufigkeit</small></span><span class="go">›</span></a>
-    </div>
+    ${wrong.length ? `<button class="btn btn-primary btn-wide" data-action="start-wdh">Falsche Fragen wiederholen (${wrong.length})</button>` : ''}
+    <h2>Fächer</h2>
+    <div class="list">${BEREICHE.map(fachCard).join('')}</div>
+    ${mehrereFaecher ? `<h2>Alles zusammen</h2>
+      <div class="action-row stack">
+        <button class="btn" data-action="start-mix" data-bereich="">Alle Fächer gemischt üben</button>
+        <button class="btn" data-action="start-random" data-bereich="">Zufallsprüfung aus allen Fächern</button>
+      </div>` : ''}
     ${themen.length ? `<h2>Schwächste Themen</h2><div class="list">${themen.map((t) => `<a class="list-row" href="#/themen/${t.id}">
       <span class="list-main"><strong>${esc(t.name)}</strong><small>${t.p.bearbeitet} von ${t.p.total} Fragen bearbeitet</small></span>
       <span class="score-pill ${scoreClass(t.p.quote)}">${pctText(t.p.quote)}</span></a>`).join('')}</div>` : ''}
@@ -622,13 +653,14 @@ function renderHome() {
 }
 
 // ---------------------------------------------------------------------
-//  Klausuren
+//  Fach und Klausuren
 // ---------------------------------------------------------------------
 
 function klausurMeta(k) {
-  const max = k.fragen.reduce((s, f) => s + pts(f), 0);
-  return [k.termin, plural(k.fragen.length, 'Frage', 'Fragen'), plural(max, 'Punkt', 'Punkte'), k.dauer ? `${k.dauer} Min.` : '']
-    .filter(Boolean).join(' · ');
+  const parts = [plural(k.fragen.length, 'Frage', 'Fragen')];
+  if (k.fragen.some(hatPunkte)) parts.push(plural(k.fragen.reduce((s, f) => s + pts(f), 0), 'Punkt', 'Punkte'));
+  if (k.dauer) parts.push(`${k.dauer} Min.`);
+  return parts.join(' · ');
 }
 
 function bestRun(kid) {
@@ -636,26 +668,55 @@ function bestRun(kid) {
     .sort((a, b) => b.punkte / b.max - a.punkte / a.max)[0];
 }
 
+function klausurRow(k, label = k.titel) {
+  const best = bestRun(k.id);
+  const p = progress(k.fragen, store.last);
+  return `<a class="list-row" href="#/klausuren/${k.id}">
+    <span class="list-main"><strong>${esc(label)}</strong>
+    <small>${esc(klausurMeta(k))} · ${p.bearbeitet} bearbeitet</small>${progressBar(p)}</span>
+    ${best ? `<span class="score-pill ${scoreClass(best.punkte / best.max)}" title="Bestes Prüfungsergebnis">${pctText(best.punkte / best.max)}</span>` : '<span class="go">›</span>'}
+  </a>`;
+}
+
+function renderFach(id) {
+  const b = bereichById.get(id);
+  if (!b) { renderNotFound(); return; }
+  const ks = klausurenIn(id);
+  const qs = fragenIn(id);
+  const p = progress(qs, store.last);
+  const wrong = wrongQuestions(id);
+  const themen = themaProgress(id);
+  show(`<section>
+    <a class="back" href="#/">Start</a>
+    <header class="page-head">
+      <p class="eyebrow">Fach</p>
+      <h1>${esc(b.name)}</h1>
+      <p class="muted">${plural(ks.length, 'Klausur', 'Klausuren')} · ${plural(qs.length, 'Frage', 'Fragen')} · ${p.bearbeitet} bearbeitet${p.quote !== null ? ` · zuletzt ${pctText(p.quote)} gewusst` : ''}</p>
+    </header>
+    ${ks.length ? `${legend}${progressBar(p)}
+    <div class="action-row stack fach-actions">
+      <button class="btn btn-primary" data-action="start-mix" data-bereich="${id}">Gemischt üben</button>
+      <button class="btn" data-action="start-random" data-bereich="${id}">Zufallsprüfung (${Math.min(20, qs.length)} Fragen)</button>
+      ${wrong.length ? `<button class="btn" data-action="start-wdh" data-bereich="${id}">Falsche wiederholen (${wrong.length})</button>` : ''}
+    </div>
+    <h2>Klausuren nach Jahren</h2>
+    <div class="list">${ks.map((k) => klausurRow(k)).join('')}</div>
+    <h2>Themen</h2>
+    <div class="list">${themen.map(themaRow).join('')}</div>
+    <p class="center"><a class="btn btn-quiet" href="#/analyse" data-action="bereich" data-id="${id}" data-go="#/analyse">Was kommt wie oft dran?</a></p>`
+    : '<p class="note">Für dieses Fach sind noch keine Klausuren eingepflegt.</p>'}
+  </section>`);
+}
+
 function renderKlausuren() {
-  const groups = bereicheMitInhalt().map((b) => {
-    const list = klausuren.filter((k) => k.bereich === b.id);
-    return `<h2>${esc(b.name)}</h2><div class="list">${list.map((k) => {
-      const best = bestRun(k.id);
-      const p = progress(k.fragen, store.last);
-      return `<a class="list-row" href="#/klausuren/${k.id}">
-        <span class="list-main"><strong>${esc(k.titel)}${k.beispiel ? ' <span class="tag">Beispiel</span>' : ''}</strong>
-        <small>${esc(klausurMeta(k))}</small>${progressBar(p)}</span>
-        ${best ? `<span class="score-pill ${scoreClass(best.punkte / best.max)}" title="Bestes Prüfungsergebnis">${pctText(best.punkte / best.max)}</span>` : '<span class="go">›</span>'}
-      </a>`;
-    }).join('')}</div>`;
-  }).join('');
+  const groups = bereicheMitInhalt().map((b) => `<h2>${esc(b.name)}</h2>
+    <div class="list">${klausurenIn(b.id).map((k) => klausurRow(k)).join('')}</div>`).join('');
   show(`<section>
     <header class="page-head">
       <h1>Klausuren</h1>
-      <p class="muted">Schreib eine Altklausur komplett durch, als Prüfung mit Auswertung am Ende oder als Übung mit Lösung nach jeder Frage.</p>
+      <p class="muted">Alle Altklausuren nach Fach und Jahr, die neueste zuerst. Geh eine Klausur komplett durch, zum Üben mit der Musterlösung nach jeder Frage oder als Prüfung mit Auswertung am Ende.</p>
     </header>
-    ${echteKlausuren().length ? '' : '<p class="note">Noch keine echten Altklausuren eingepflegt. Die Beispielklausur zeigt, wie es funktioniert.</p>'}
-    ${groups}
+    ${groups || '<p class="note">Noch keine Klausuren eingepflegt.</p>'}
   </section>`);
 }
 
@@ -664,27 +725,29 @@ function renderKlausurSetup(id) {
   if (!k) { renderNotFound(); return; }
   const a = analyse(k.fragen);
   const runs = store.runs().filter((r) => r.klausurId === id);
-  const mode = sessionStorage.getItem('setup-mode') || 'pruefung';
+  const nurOffen = k.fragen.every((f) => f.typ === 'offen');
+  const mode = sessionStorage.getItem('setup-mode') || (nurOffen ? 'ueben' : 'pruefung');
+  const p = progress(k.fragen, store.last);
   show(`<section>
-    <a class="back" href="#/klausuren">Klausuren</a>
+    <a class="back" href="#/fach/${k.bereich}">${esc(bereichById.get(k.bereich)?.kurz || 'Klausuren')}</a>
     <header class="page-head">
       <p class="eyebrow">${esc(bereichById.get(k.bereich)?.name || '')}</p>
       <h1>${esc(k.titel)}</h1>
-      <p class="muted">${esc(klausurMeta(k))}</p>
+      <p class="muted">${esc(klausurMeta(k))} · ${p.bearbeitet} bearbeitet</p>
     </header>
     <form class="panel setup" data-form="setup" data-id="${k.id}">
       <fieldset>
         <legend>Modus</legend>
-        <label class="choice"><input type="radio" name="mode" value="pruefung" ${mode === 'pruefung' ? 'checked' : ''}>
-          <span><strong>Prüfung</strong><small>Wie im Ernstfall: alle Fragen beantworten, abgeben, dann Auswertung mit Note.</small></span></label>
         <label class="choice"><input type="radio" name="mode" value="ueben" ${mode === 'ueben' ? 'checked' : ''}>
-          <span><strong>Üben</strong><small>Lösung und Erklärung direkt nach jeder Frage.</small></span></label>
+          <span><strong>Üben</strong><small>Frage lesen, selbst überlegen, dann Musterlösung aufdecken und einschätzen.</small></span></label>
+        <label class="choice"><input type="radio" name="mode" value="pruefung" ${mode === 'pruefung' ? 'checked' : ''}>
+          <span><strong>Prüfung</strong><small>Alle Fragen am Stück bearbeiten, Antworten notieren, erst am Ende mit den Musterlösungen vergleichen.</small></span></label>
       </fieldset>
       <fieldset class="limit" ${mode === 'ueben' ? 'disabled' : ''}>
         <legend>Zeit</legend>
         <label class="choice"><input type="checkbox" name="limit" ${k.dauer ? 'checked' : ''}>
           <span><strong>Mit Zeitlimit</strong><small>Bei Ablauf wird automatisch abgegeben. Unterbrechen hält die Uhr an.</small></span></label>
-        <label class="inline-field">Minuten <input type="number" name="minutes" min="1" max="600" inputmode="numeric" value="${k.dauer || 60}"></label>
+        <label class="inline-field">Minuten <input type="number" name="minutes" min="1" max="600" inputmode="numeric" value="${k.dauer || 90}"></label>
       </fieldset>
       <button class="btn btn-primary btn-wide" type="submit">Starten</button>
     </form>
@@ -692,8 +755,10 @@ function renderKlausurSetup(id) {
     <h2>Was drankommt</h2>
     <div class="panel">
       <div class="chips">${a.themen.map((t) => `<a class="chip" href="#/themen/${t.id}">${esc(themaName(t.id))} <span>${t.fragen}</span></a>`).join('')}</div>
-      <div class="chips">${a.typen.map((t) => `<span class="chip">${TYPEN[t.id]} <span>${t.fragen}</span></span>`).join('')}</div>
+      ${a.arten.length ? `<div class="chips">${a.arten.map((t) => `<span class="chip">${ARTEN[t.id]} <span>${t.fragen}</span></span>`).join('')}</div>` : ''}
     </div>
+    <h2>Alle Fragen mit Musterlösung</h2>
+    ${browseList(k.fragen, false)}
     ${runs.length ? `<h2>Deine Ergebnisse</h2><div class="list">${runs.map(runRow).join('')}</div>` : ''}
   </section>`);
 }
@@ -711,8 +776,17 @@ function themaProgress(bereich) {
   }).sort((a, b) => b.qs.length - a.qs.length || a.name.localeCompare(b.name, 'de'));
 }
 
-function wrongQuestions() {
-  return store.wrongIds().map((id) => frageById.get(id)).filter(Boolean);
+function themaRow(t) {
+  return `<a class="list-row" href="#/themen/${t.id}">
+    <span class="list-main"><strong>${esc(t.name)}</strong>
+    <small>${plural(t.qs.length, 'Frage', 'Fragen')} · ${t.p.bearbeitet} bearbeitet${t.p.falsch + t.p.teilweise ? ` · ${t.p.falsch + t.p.teilweise} zum Wiederholen` : ''}</small>
+    ${progressBar(t.p)}</span>
+    <span class="go">›</span></a>`;
+}
+
+function wrongQuestions(bereich = '') {
+  return store.wrongIds().map((id) => frageById.get(id))
+    .filter((q) => q && (!bereich || q.klausur.bereich === bereich));
 }
 
 function renderThemen() {
@@ -721,29 +795,26 @@ function renderThemen() {
   show(`<section>
     <header class="page-head">
       <h1>Themen</h1>
-      <p class="muted">Fragen aus allen Klausuren, sortiert nach Thema. Beim Üben siehst du die Lösung direkt nach jeder Frage.</p>
+      <p class="muted">Fragen aus allen Klausuren, nach Thema sortiert. Beim Üben siehst du die Musterlösung direkt nach jeder Frage.</p>
     </header>
     ${bereichChips()}
-    <button class="btn btn-wide" data-action="start-mix">Alles gemischt üben (${all.length})</button>
+    <button class="btn btn-wide" data-action="start-mix" data-bereich="${bereichFilter}">Alles gemischt üben (${all.length})</button>
     <h2>${plural(list.length, 'Thema', 'Themen')}</h2>
     ${legend}
-    <div class="list">${list.map((t) => `<a class="list-row" href="#/themen/${t.id}">
-      <span class="list-main"><strong>${esc(t.name)}</strong>
-      <small>${plural(t.qs.length, 'Frage', 'Fragen')} · ${t.p.bearbeitet} bearbeitet${t.p.falsch + t.p.teilweise ? ` · ${t.p.falsch + t.p.teilweise} zum Wiederholen` : ''}</small>
-      ${progressBar(t.p)}</span>
-      <span class="go">›</span></a>`).join('')}</div>
+    <div class="list">${list.map(themaRow).join('')}</div>
   </section>`);
 }
 
-function browseList(list) {
+function browseList(list, withSource = true) {
   return `<div class="browse">${list.map((q) => `<details class="browse-q">
-    <summary>${statusDot(q.id)}<span class="browse-src">${esc(q.klausur.titel)} · ${esc(q.nr)}</span><span class="browse-text">${esc(firstLine(q.frage))}</span></summary>
+    <summary>${statusDot(q.id)}<span class="browse-src">${withSource ? `${esc(klausurLabel(q.klausur))} · ` : ''}Aufgabe ${esc(q.nr)}</span><span class="browse-text">${esc(firstLine(q.frage))}</span></summary>
     <div class="browse-body">${questionHtml(q, undefined, { reveal: true, context: 'closed' })}</div>
   </details>`).join('')}</div>`;
 }
 
 function renderThema(id) {
-  const list = fragen.filter((f) => f.themen.includes(id));
+  const list = fragen.filter((f) => f.themen.includes(id))
+    .sort((a, b) => (b.klausur.sortierung ?? 0) - (a.klausur.sortierung ?? 0));
   if (!list.length && !themaById.has(id)) { renderNotFound(); return; }
   const p = progress(list, store.last);
   const fresh = list.filter((f) => !store.last(f.id));
@@ -753,14 +824,14 @@ function renderThema(id) {
     <a class="back" href="#/themen">Themen</a>
     <header class="page-head">
       <h1>${esc(themaName(id))}</h1>
-      <p class="muted">${plural(list.length, 'Frage', 'Fragen')} aus ${plural(nKlausuren, 'Klausur', 'Klausuren')}${p.quote !== null ? ` · zuletzt ${pctText(p.quote)} der Punkte` : ''}</p>
+      <p class="muted">${plural(list.length, 'Frage', 'Fragen')} aus ${plural(nKlausuren, 'Klausur', 'Klausuren')}${p.quote !== null ? ` · zuletzt ${pctText(p.quote)} gewusst` : ''}</p>
     </header>
     ${list.length ? `<div class="action-row stack">
       <button class="btn btn-primary" data-action="start-thema" data-id="${id}" data-set="alle">Alle üben (${list.length})</button>
       ${fresh.length && fresh.length < list.length ? `<button class="btn" data-action="start-thema" data-id="${id}" data-set="neu">Nur neue (${fresh.length})</button>` : ''}
       ${wrong.length ? `<button class="btn" data-action="start-thema" data-id="${id}" data-set="falsch">Nur falsche (${wrong.length})</button>` : ''}
     </div>
-    <h2>Fragen mit Lösung</h2>
+    <h2>Fragen mit Musterlösung</h2>
     ${browseList(list)}` : '<p class="note">Zu diesem Thema gibt es noch keine Fragen.</p>'}
   </section>`);
 }
@@ -772,7 +843,7 @@ function renderWiederholen() {
   show(`<section>
     <header class="page-head">
       <h1>Wiederholen</h1>
-      <p class="muted">Hier landet jede Frage, die du zuletzt falsch oder nur teilweise richtig beantwortet hast. Sobald du sie einmal voll richtig hast, verschwindet sie.</p>
+      <p class="muted">Hier landet jede Frage, die du zuletzt nicht oder nur teilweise wusstest. Sobald du sie einmal voll gewusst hast, verschwindet sie.</p>
     </header>
     ${wrong.length ? `<button class="btn btn-primary btn-wide" data-action="start-wdh">Alle wiederholen (${wrong.length})</button>
       <h2>Nach Thema</h2>
@@ -780,7 +851,7 @@ function renderWiederholen() {
         <span class="list-main"><strong>${esc(themaName(t))}</strong><small>${plural(qs.length, 'Frage', 'Fragen')}</small></span><span class="go">›</span></button>`).join('')}</div>
       <h2>Alle Fragen</h2>
       ${browseList(wrong)}`
-    : '<p class="note">Nichts zu wiederholen. Alles, was du bisher bearbeitet hast, war zuletzt richtig.</p>'}
+    : '<p class="note">Nichts zu wiederholen. Alles, was du bisher bearbeitet hast, wusstest du zuletzt.</p>'}
   </section>`);
 }
 
@@ -788,13 +859,14 @@ function renderWiederholen() {
 //  Analyse
 // ---------------------------------------------------------------------
 
-function barRows(rows, label, href) {
-  const maxShare = Math.max(...rows.map((r) => r.anteilPunkte), 0.0001);
+function barRows(rows, label, href, mitPunkten) {
+  const share = (r) => (mitPunkten ? r.anteilPunkte : r.anteilFragen);
+  const maxShare = Math.max(...rows.map(share), 0.0001);
   return rows.map((r) => {
     const inner = `<span class="stat-name">${esc(label(r))}</span>
-      <span class="stat-val">${pctText(r.anteilPunkte)}</span>
-      <span class="stat-bar"><span style="width:${(r.anteilPunkte / maxShare) * 100}%"></span></span>
-      <span class="stat-meta">${plural(r.fragen, 'Frage', 'Fragen')} · ${pointsText(r.punkte)} Punkte · in ${r.klausuren} von ${analyseCache.klausuren} Klausuren</span>`;
+      <span class="stat-val">${pctText(share(r))}</span>
+      <span class="stat-bar"><span style="width:${(share(r) / maxShare) * 100}%"></span></span>
+      <span class="stat-meta">${plural(r.fragen, 'Frage', 'Fragen')}${mitPunkten ? ` · ${pointsText(r.punkte)} Punkte` : ''} · in ${r.klausuren} von ${analyseCache.klausuren} Klausuren</span>`;
     return href ? `<a class="stat-row" href="${href(r)}">${inner}</a>` : `<div class="stat-row">${inner}</div>`;
   }).join('');
 }
@@ -802,33 +874,40 @@ function barRows(rows, label, href) {
 let analyseCache = null;
 
 function renderAnalyse() {
-  const real = fragenIn(bereichFilter).filter((f) => !f.klausur.beispiel);
-  const list = real.length ? real : fragenIn(bereichFilter);
+  const list = fragenIn(bereichFilter);
   const a = analyse(list);
   analyseCache = a;
+  const mitPunkten = list.some(hatPunkte);
+  const sortiert = (rows) => [...rows].sort((x, y) => (mitPunkten ? y.punkte - x.punkte : y.fragen - x.fragen) || y.klausuren - x.klausuren);
   const table = (rows, label) => `<details class="table-toggle"><summary>Als Tabelle</summary><div class="table-wrap"><table>
-    <thead><tr><th></th><th class="num">Fragen</th><th class="num">Punkte</th><th class="num">Anteil</th><th class="num">Klausuren</th></tr></thead>
-    <tbody>${rows.map((r) => `<tr><td>${esc(label(r))}</td><td class="num">${r.fragen}</td><td class="num">${pointsText(r.punkte)}</td><td class="num">${pctText(r.anteilPunkte)}</td><td class="num">${r.klausuren}</td></tr>`).join('')}</tbody>
+    <thead><tr><th></th><th class="is-num">Fragen</th>${mitPunkten ? '<th class="is-num">Punkte</th>' : ''}<th class="is-num">Anteil</th><th class="is-num">Klausuren</th></tr></thead>
+    <tbody>${rows.map((r) => `<tr><td>${esc(label(r))}</td><td class="is-num">${r.fragen}</td>${mitPunkten ? `<td class="is-num">${pointsText(r.punkte)}</td>` : ''}<td class="is-num">${pctText(mitPunkten ? r.anteilPunkte : r.anteilFragen)}</td><td class="is-num">${r.klausuren}</td></tr>`).join('')}</tbody>
   </table></div></details>`;
+  const themen = sortiert(a.themen);
+  const arten = sortiert(a.arten);
+  const typen = sortiert(a.typen);
+  const bezug = mitPunkten ? 'dem Anteil an allen Punkten' : 'dem Anteil an allen Fragen';
   show(`<section>
     <header class="page-head">
       <h1>Analyse</h1>
-      <p class="muted">Welche Themen und Fragetypen kommen in den Altklausuren wie oft vor? Sortiert nach dem Anteil an allen Punkten.</p>
+      <p class="muted">Welche Themen und Aufgabenarten kommen in den Altklausuren wie oft vor? Sortiert nach ${bezug}.</p>
     </header>
     ${bereichChips()}
-    ${real.length ? '' : '<p class="note">Noch keine echten Klausuren eingepflegt. Die Zahlen stammen aus der Beispielklausur.</p>'}
     <div class="tiles">
       <div><strong>${a.klausuren}</strong><span>${a.klausuren === 1 ? 'Klausur' : 'Klausuren'}</span></div>
       <div><strong>${a.fragen}</strong><span>Fragen</span></div>
-      <div><strong>${pointsText(a.punkte)}</strong><span>Punkte</span></div>
+      <div><strong>${a.themen.length}</strong><span>Themen</span></div>
     </div>
     <h2>Themen</h2>
-    <div class="stats">${barRows(a.themen, (r) => themaName(r.id), (r) => `#/themen/${r.id}`)}</div>
-    ${table(a.themen, (r) => themaName(r.id))}
-    <h2>Fragetypen</h2>
-    <p class="muted small">Multiple Choice, Zuordnung, Reihenfolge und Rechenaufgaben wertet die App automatisch aus. Freie Antworten bewertest du selbst.</p>
-    <div class="stats">${barRows(a.typen, (r) => TYPEN[r.id])}</div>
-    ${table(a.typen, (r) => TYPEN[r.id])}
+    <div class="stats">${barRows(themen, (r) => themaName(r.id), (r) => `#/themen/${r.id}`, mitPunkten)}</div>
+    ${table(themen, (r) => themaName(r.id))}
+    ${arten.length ? `<h2>Aufgabenarten</h2>
+      <div class="stats">${barRows(arten, (r) => ARTEN[r.id], null, mitPunkten)}</div>
+      <dl class="arten-info">${arten.map((r) => `<dt>${ARTEN[r.id]}</dt><dd>${esc(ARTEN_INFO[r.id])}</dd>`).join('')}</dl>
+      ${table(arten, (r) => ARTEN[r.id])}` : ''}
+    ${typen.length > 1 ? `<h2>Auswertung in der App</h2>
+      <p class="muted small">Multiple Choice, Zuordnung, Reihenfolge und Rechenaufgaben mit Ergebnisfeld wertet die App automatisch aus. Freie Antworten bewertest du selbst.</p>
+      <div class="stats">${barRows(typen, (r) => TYPEN[r.id], null, mitPunkten)}</div>` : ''}
   </section>`);
 }
 
@@ -864,12 +943,13 @@ function renderErgebnis(id, sub) {
   const themen = [...byThema.entries()].sort((a, b) => a[1].got / a[1].max - b[1].got / b[1].max);
   const wrong = qs.filter((q) => (r.scores[q.id] ?? 0) < 1);
   const n = note(pct * 100);
-  const isExam = r.kind === 'klausur' && r.mode === 'pruefung';
+  const isExam = r.mode === 'pruefung';
+  const mitPunkten = qs.some(hatPunkte);
   show(`<section>
     <header class="page-head result-head">
       <p class="eyebrow">${esc(r.titel)}</p>
       <h1 class="big">${pctText(pct)}</h1>
-      <p class="result-sub">${pointsText(r.punkte)} von ${pointsText(r.max)} Punkten${isExam ? ` · Note ${n.n} (${n.text})` : ''}</p>
+      <p class="result-sub">${mitPunkten ? `${pointsText(r.punkte)} von ${pointsText(r.max)} Punkten` : `${pointsText(r.punkte)} von ${plural(r.max, 'Frage', 'Fragen')} gewusst`}${isExam ? ` · Note ${n.n} (${n.text})${mitPunkten ? '' : ', Richtwert'}` : ''}</p>
       <p class="muted small">${dateTimeText(r.end)} · ${minutesText(r.dauerMs)}${r.limitMin ? ` von ${r.limitMin} Minuten` : ''}${r.timeUp ? ' · Zeit abgelaufen' : ''}</p>
     </header>
     <div class="action-row stack">
@@ -883,7 +963,7 @@ function renderErgebnis(id, sub) {
       <span class="stat-val">${pointsText(e.got)} / ${pointsText(e.max)}</span>
       <span class="stat-bar stat-bar-score ${scoreClass(e.got / e.max)}"><span style="width:${(e.got / e.max) * 100}%"></span></span>
     </a>`).join('')}</div>
-    ${isExam ? '<p class="muted small">Notenschlüssel der IHK: ab 92 % sehr gut, ab 81 % gut, ab 67 % befriedigend, ab 50 % ausreichend, ab 30 % mangelhaft.</p>' : ''}
+    ${isExam ? `<p class="muted small">Notenschlüssel der IHK: ab 92 % sehr gut, ab 81 % gut, ab 67 % befriedigend, ab 50 % ausreichend, ab 30 % mangelhaft.${mitPunkten ? '' : ' Weil die Musterlösungen keine Punkte nennen, zählt jede Frage gleich viel: gewusst ganz, teilweise halb.'}</p>` : ''}
     <p class="center"><a class="btn btn-quiet" href="#/">Zur Startseite</a></p>
   </section>`);
 }
@@ -961,7 +1041,11 @@ function startThema(id, set) {
 }
 
 const actions = {
-  bereich(el) { bereichFilter = el.dataset.id; route(); },
+  bereich(el) {
+    bereichFilter = el.dataset.id;
+    if (el.dataset.go) go(el.dataset.go);
+    else route();
+  },
   export() { downloadBackup(); route(); },
   discard() {
     if (!confirm('Laufende Sitzung verwerfen? Antworten daraus werden nicht gespeichert.')) return;
@@ -969,14 +1053,22 @@ const actions = {
     route();
   },
   'start-wdh'(el) {
-    let list = wrongQuestions();
+    let list = wrongQuestions(el.dataset.bereich || '');
     if (el.dataset.thema) list = list.filter((q) => q.themen.includes(el.dataset.thema));
     const titel = el.dataset.thema ? `Wiederholen: ${themaName(el.dataset.thema)}` : 'Falsche Fragen wiederholen';
     startSession({ kind: 'wdh', mode: 'ueben', titel, qids: shuffle(list.map((q) => q.id)), back: '#/wiederholen' });
   },
-  'start-mix'() {
-    const list = fragenIn(bereichFilter);
-    startSession({ kind: 'mix', mode: 'ueben', titel: 'Alles gemischt', qids: shuffle(list.map((q) => q.id)), back: '#/themen' });
+  'start-mix'(el) {
+    const bereich = el.dataset.bereich ?? bereichFilter;
+    const list = fragenIn(bereich);
+    const titel = bereich ? `${bereichById.get(bereich).kurz}: gemischt` : 'Alle Fächer gemischt';
+    startSession({ kind: 'mix', mode: 'ueben', titel, qids: shuffle(list.map((q) => q.id)), back: bereich ? `#/fach/${bereich}` : '#/' });
+  },
+  'start-random'(el) {
+    const bereich = el.dataset.bereich || '';
+    const ids = shuffle(fragenIn(bereich).map((q) => q.id)).slice(0, 20);
+    const titel = `Zufallsprüfung${bereich ? ` ${bereichById.get(bereich).kurz}` : ''}`;
+    startSession({ kind: 'mix', mode: 'pruefung', titel, qids: ids, limitMin: 0, back: bereich ? `#/fach/${bereich}` : '#/' });
   },
   'start-thema'(el) { startThema(el.dataset.id, el.dataset.set); },
   'start-run-wrong'(el) {
@@ -1129,7 +1221,7 @@ view.addEventListener('submit', (e) => {
 //  Navigation
 // ---------------------------------------------------------------------
 
-const TAB_FOR = { '': '', klausuren: 'klausuren', ergebnis: 'klausuren', themen: 'themen', wiederholen: 'themen', analyse: 'analyse', daten: 'daten' };
+const TAB_FOR = { '': '', fach: '', klausuren: 'klausuren', ergebnis: 'klausuren', themen: 'themen', wiederholen: 'themen', analyse: 'analyse', daten: 'daten' };
 
 function route() {
   clearInterval(timer);
@@ -1144,6 +1236,7 @@ function route() {
   });
   switch (page) {
     case '': renderHome(); break;
+    case 'fach': renderFach(arg); break;
     case 'klausuren': if (arg) renderKlausurSetup(arg); else renderKlausuren(); break;
     case 'themen': if (arg) renderThema(arg); else renderThemen(); break;
     case 'wiederholen': renderWiederholen(); break;

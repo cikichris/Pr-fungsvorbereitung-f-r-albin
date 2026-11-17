@@ -9,6 +9,9 @@
 
 export const pts = (q) => q.punkte ?? 1;
 
+/** Ohne Punktangabe bewertet man sich mit gewusst / teilweise / nicht gewusst. */
+export const hatPunkte = (q) => q.punkte !== undefined;
+
 /** "1.234,56 €", "2,5", "2.5", "-3" -> Zahl; null, wenn keine Zahl erkennbar ist. */
 export function parseNumber(input) {
   if (input === null || input === undefined) return null;

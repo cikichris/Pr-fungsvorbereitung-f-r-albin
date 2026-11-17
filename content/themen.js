@@ -1,44 +1,53 @@
 // =====================================================================
-//  Prüfungsbereiche, Themen und Fragetypen
+//  Fächer (Prüfungsbereiche), Themen, Aufgabenarten
 //
-//  Jede Frage einer Klausur gehört zu einem Prüfungsbereich (über die
-//  Klausur) und zu einem oder mehreren Themen (Feld thema). Neue Themen
-//  hier ergänzen, die id danach nicht mehr ändern.
+//  Jede Klausur gehört zu einem Fach (Feld bereich), jede Frage zu einem
+//  oder mehreren Themen (Feld thema). Neue Themen hier ergänzen, die id
+//  danach nicht mehr ändern: An ihr hängen Filter und Auswertungen.
 // =====================================================================
 
 export const BEREICHE = [
-  { id: 'teil1', name: 'Sortimentsbewirtschaftung und Vertragsanbahnung', kurz: 'Teil 1' },
   { id: 'gp', name: 'Geschäftsprozesse im E-Commerce', kurz: 'Geschäftsprozesse' },
+  { id: 'kk', name: 'Kundenkommunikation im E-Commerce', kurz: 'Kundenkommunikation' },
   { id: 'wiso', name: 'Wirtschafts- und Sozialkunde', kurz: 'WiSo' },
 ];
 
 export const THEMEN = [
-  // E-Commerce
-  { id: 'sortiment', name: 'Sortiment und Warenwirtschaft' },
-  { id: 'beschaffung', name: 'Beschaffung und Lieferanten' },
-  { id: 'kaufvertrag', name: 'Kaufvertrag und Vertragsstörungen' },
-  { id: 'onlinerecht', name: 'Online-Recht: Fernabsatz, Widerruf, Pflichtangaben' },
-  { id: 'datenschutz', name: 'Datenschutz' },
-  { id: 'kalkulation', name: 'Kalkulation und Preise' },
-  { id: 'kennzahlen', name: 'Kennzahlen und Controlling' },
-  { id: 'rechnungswesen', name: 'Rechnungswesen' },
-  { id: 'marketing', name: 'Online-Marketing' },
-  { id: 'vertriebskanaele', name: 'Onlineshop, Marktplätze und Vertriebskanäle' },
-  { id: 'zahlung', name: 'Zahlungsarten und Zahlungsabwicklung' },
-  { id: 'logistik', name: 'Versand, Logistik und Retouren' },
-  { id: 'kundenkommunikation', name: 'Kundenkommunikation und Service' },
+  // Geschäftsprozesse im E-Commerce
+  { id: 'vertrieb', name: 'Vertriebskanäle und Marktplätze' },
+  { id: 'sortiment', name: 'Sortiment und Produktdaten' },
+  { id: 'kalkulation', name: 'Kalkulation, Preise und Angebotsvergleich' },
+  { id: 'kostenrechnung', name: 'Kosten- und Leistungsrechnung' },
+  { id: 'rechnungswesen', name: 'Rentabilität, Liquidität und Controlling' },
+  { id: 'shopkennzahlen', name: 'Shop-Kennzahlen und Webanalyse' },
+  { id: 'customerjourney', name: 'Customer Journey und Conversion-Funnel' },
+  { id: 'testing', name: 'Tests, Hypothesen und Conversion-Optimierung' },
+  { id: 'marketing', name: 'Marketingstrategie und Werbeplanung' },
+  { id: 'onlinewerbung', name: 'Suchmaschinen- und Displaywerbung' },
+  { id: 'werbekennzahlen', name: 'Werbekennzahlen und Abrechnungsmodelle' },
+  { id: 'socialmedia', name: 'Social Media und Influencer' },
+  { id: 'emailmarketing', name: 'E-Mail- und Newsletter-Marketing' },
+  { id: 'analyse', name: 'Marktforschung und Analyseinstrumente' },
   { id: 'projekt', name: 'Projektmanagement' },
-  // Wirtschafts- und Sozialkunde
-  { id: 'ausbildung', name: 'Berufsausbildung' },
-  { id: 'arbeitsrecht', name: 'Arbeitsrecht und Arbeitsschutz' },
-  { id: 'mitbestimmung', name: 'Tarifrecht und Mitbestimmung' },
-  { id: 'sozialversicherung', name: 'Sozialversicherung und Vorsorge' },
-  { id: 'entgelt', name: 'Entgelt und Steuern' },
-  { id: 'rechtsformen', name: 'Unternehmensformen' },
-  { id: 'wirtschaft', name: 'Markt und Wirtschaftsordnung' },
-  { id: 'nachhaltigkeit', name: 'Nachhaltigkeit und Umweltschutz' },
+  { id: 'recht', name: 'Recht im E-Commerce' },
 ];
 
+/** Wie die Frage in der Prüfung gestellt war (Feld art). */
+export const ARTEN = {
+  rechnen: 'Rechenaufgabe',
+  auswahl: 'Auswahlaufgabe',
+  erklaeren: 'Begriff erklären',
+  anwenden: 'Fallbezogen anwenden',
+};
+
+export const ARTEN_INFO = {
+  rechnen: 'Berechnen mit Rechenweg, z. B. Kalkulation, Deckungsbeitrag, Kennzahlen.',
+  auswahl: 'In der Prüfung gebunden: richtige Antwort ankreuzen, zuordnen oder Reihenfolge festlegen.',
+  erklaeren: 'Einen Fachbegriff erklären oder abgrenzen.',
+  anwenden: 'Nennen, erläutern, beurteilen oder empfehlen, bezogen auf die Situation im Unternehmen.',
+};
+
+/** Wie die App eine Antwort auswertet (Feld typ). */
 export const TYPEN = {
   mc: 'Multiple Choice',
   zuordnung: 'Zuordnung',

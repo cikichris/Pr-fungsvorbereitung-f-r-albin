@@ -13,6 +13,7 @@ export function analyse(list) {
   const klausurIds = new Set(list.map((f) => f.klausur.id));
   const themen = new Map();
   const typen = new Map();
+  const arten = new Map();
   const entry = (map, id) => {
     if (!map.has(id)) map.set(id, { id, fragen: 0, punkte: 0, klausuren: new Set() });
     return map.get(id);
@@ -25,10 +26,13 @@ export function analyse(list) {
       e.punkte += pts(f) / ts.length;
       e.klausuren.add(f.klausur.id);
     }
-    const e = entry(typen, f.typ);
-    e.fragen += 1;
-    e.punkte += pts(f);
-    e.klausuren.add(f.klausur.id);
+    for (const [map, key] of [[typen, f.typ], [arten, f.art]]) {
+      if (!key) continue;
+      const e = entry(map, key);
+      e.fragen += 1;
+      e.punkte += pts(f);
+      e.klausuren.add(f.klausur.id);
+    }
   }
   const finish = (map) => [...map.values()]
     .map((e) => ({
@@ -44,6 +48,7 @@ export function analyse(list) {
     klausuren: klausurIds.size,
     themen: finish(themen),
     typen: finish(typen),
+    arten: finish(arten),
   };
 }
 
