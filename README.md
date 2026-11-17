@@ -6,11 +6,11 @@ Lern-App für die Abschlussprüfung **Kaufmann/Kauffrau im E-Commerce** (Umschul
 
 | Fach | Stand |
 |---|---|
-| Geschäftsprozesse im E-Commerce | 13 Klausuren (Sommer 2020 bis 2026), 378 Fragen mit Musterlösung |
-| Kundenkommunikation im E-Commerce | folgt |
+| Geschäftsprozesse im E-Commerce | 13 Klausuren (Sommer 2020 bis Sommer 2026), 378 Fragen mit Musterlösung, Formelblatt |
+| Kundenkommunikation im E-Commerce | 13 Klausuren (Sommer 2020 bis Sommer 2026), 216 Fragen mit Musterlösung |
 | Wirtschafts- und Sozialkunde | folgt |
 
-Jede Frage ist einem von 16 Themen und einer Aufgabenart zugeordnet (Rechenaufgabe, Auswahlaufgabe, Begriff erklären, fallbezogen anwenden).
+Jede Frage ist einem Thema (16 in Geschäftsprozesse, 12 in Kundenkommunikation) und einer Aufgabenart zugeordnet (Rechenaufgabe, Auswahlaufgabe, Begriff erklären, fallbezogen anwenden).
 
 ## Funktionen
 
@@ -20,6 +20,7 @@ Jede Frage ist einem von 16 Themen und einer Aufgabenart zugeordnet (Rechenaufga
   - zum **Üben**: Frage lesen, selbst überlegen, Musterlösung aufdecken und einschätzen,
   - als **Prüfung**: alle Fragen am Stück, Antworten notieren, erst am Ende mit den Musterlösungen vergleichen, optional mit Zeitlimit.
 - **Themen:** Fragen aus allen Klausuren nach Thema üben (alle, nur neue, nur falsche) oder mit Musterlösung durchblättern.
+- **Formeln:** Formelblatt Geschäftsprozesse und die Formeln aus den Musterlösungen Kundenkommunikation, nach Thema, mit Suche und Abfragemodus (Formel erst beim Antippen sichtbar).
 - **Wiederholen:** Jede Frage, die zuletzt nicht oder nur teilweise gewusst war, landet hier, bis sie einmal voll gewusst ist.
 - **Analyse:** Welche Themen und Aufgabenarten kommen wie oft vor und in wie vielen Klausuren.
 - **Daten:** Prüfungstermin, Sicherung herunterladen und einlesen, Lernstand löschen.
@@ -63,11 +64,12 @@ Die `id` einer Frage darf danach nicht mehr geändert werden. An ihr hängt der 
 
 ### Musterlösungen aus PDF umwandeln
 
-Die Musterlösungen für Geschäftsprozesse wurden mit den Skripten in [`tools/import/`](tools/import/) übernommen:
+Die Musterlösungen wurden mit den Skripten in [`tools/import/`](tools/import/) übernommen:
 
 - `parse_pdf.py` liest Fragen, Absätze, Aufzählungen, Tabellen und Fettdruck aus der PDF (`python3 parse_pdf.py <pdf> <json>`, braucht `pdfplumber`).
-- `gen.py` erzeugt daraus die Klausurdateien. Was in der Lösung unter „Gegeben:“ steht, wandert in die Frage.
-- `themes.py` ordnet Themen über Stichwörter zu und erkennt die Aufgabenart. `overrides.py` enthält die Korrekturen von Hand und die Abschriften der Formelbilder.
+- `gen.py <gp|kk> <json-ordner> <repo>` erzeugt daraus die Klausurdateien. Was in der Lösung unter „Gegeben:“ oder „Situation:“ steht, wandert in die Frage.
+- `themes.py` und `themes_kk.py` ordnen Themen über Stichwörter zu, `themes.py` erkennt auch die Aufgabenart. `overrides.py` enthält die Korrekturen von Hand und die Abschriften der Formelbilder.
+- `gen_formeln.py` erzeugt `content/formeln.js` aus dem Formelblatt.
 
 ### Aufbau einer Klausurdatei
 

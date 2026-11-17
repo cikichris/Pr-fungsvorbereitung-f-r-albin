@@ -42,6 +42,22 @@ THEMA_OVERRIDE = {
     'gp-2025-26:21': 'werbekennzahlen',
     'gp-2026:7': 'analyse',
     'gp-2026:8': 'analyse',
+    # Kundenkommunikation
+    'kk-2020-sommer:25': 'kommunikation',
+    'kk-2020-21-winter:1': 'maengel',
+    'kk-2020-21-winter:9': 'kanaele',
+    'kk-2022-sommer:4': 'maengel',
+    'kk-2022-23-winter:8': 'kanaele',
+    'kk-2023-sommer:6': 'kaufvertrag',
+    'kk-2023-24-winter:9': 'stoerungen',
+    'kk-2024-sommer:9': 'beschwerde',
+    'kk-2024-sommer:11': 'beschwerde',
+    'kk-2024-25-winter:1': 'zahlung',
+    'kk-2024-25-winter:7': 'servicekennzahlen',
+    'kk-2025-sommer:1': 'retouren',
+    'kk-2025-26:4': 'maengel',
+    'kk-2026:11': 'kundenbindung',
+    'kk-2026:12': 'kundenbindung',
 }
 
 BILDER = {
@@ -128,4 +144,57 @@ Mögliche Erhöhung gegenüber dem bisherigen Budget:
 > Langfristige Preisuntergrenze = kv + kf
 
 (kv = variable Kosten je Stück, kf = fixe Kosten je Stück)""",
+}
+
+BILDER.update({
+    'AP2_Kundenkommunikation_2020:2-1': """> Verzugszinsen = offener Betrag × Zinssatz in Prozent × Verzugstage ÷ (100 × 365)""",
+    'AP2_Kundenkommunikation_2020:2-2': """> 259,41 × 4,12 × 29 ÷ (100 × 365) = **0,85 €**""",
+    'AP2_Kundenkommunikation_2021-22:2-1': """> −0,88 % + 9 Prozentpunkte = 8,12 %""",
+    'AP2_Kundenkommunikation_2021-22:2-2': """> Verzugszinsen = offener Betrag × Zinssatz in Prozent × Verzugstage ÷ (100 × 365)
+
+Beispiel:
+
+> 3.084,48 × 8,12 × 45 ÷ (100 × 365) = 30,88 €
+
+> Gesamtbetrag = Rechnungsbetrag + Verzugszinsen + berechtigte Mahnkosten
+
+Mit den vorgegebenen Mahnkosten der Aufgabe:
+
+> 3.084,48 + 30,88 + 68,00 = **3.183,36 €**""",
+    'AP2_Kundenkommunikation_2022:4-1': """> Antwortrate = beantwortete Anfragen ÷ eingegangene Anfragen × 100
+
+Beispiel:
+
+> 371 ÷ 530 × 100 = **70 %**""",
+    'AP2_Kundenkommunikation_2025:3-1': """> Umsatzanteil = Kundenumsatz ÷ Gesamtumsatz × 100""",
+    'AP2_Kundenkommunikation_2025:4-1': """> Retention-Rate = (Kunden am Ende − Neukunden) ÷ Kunden zu Beginn × 100""",
+    'AP2_Kundenkommunikation_2025:4-2': """> (8.400 − 2.250) ÷ 8.200 × 100 = **75 %**""",
+    'AP2_Kundenkommunikation_2025:5-1': """> Durchschnittliche Antwortzeit = Summe aller Antwortzeiten ÷ Anzahl beantworteter Anfragen
+
+Beispiel:
+
+> (2 + 3 + 2 + 1) ÷ 4 = **2 Stunden**""",
+    'AP2_Kundenkommunikation_2025-26:3-1': """> Verzugszinssatz = Basiszinssatz + 9 Prozentpunkte
+> 1,27 % + 9 Prozentpunkte = **10,27 % pro Jahr**""",
+    'AP2_Kundenkommunikation_2025-26:4-1': """> Verzugszinsen = Rechnungsbetrag × Zinssatz × Verzugstage ÷ (100 × 365)
+
+Werte einsetzen:
+
+> Verzugszinsen = 10.000 × 10,27 × 35 ÷ (100 × 365)
+> Verzugszinsen = **98,48 €**""",
+    'AP2_Kundenkommunikation_2025-26:8-1': """> CSAT in % = zufriedene Kunden ÷ alle antwortenden Kunden × 100""",
+    'AP2_Kundenkommunikation_2025-26:8-2': """> Interaktionsrate in % = Interaktionen ÷ Reichweite × 100""",
+})
+
+# Ganze Lösungen von Hand, wo die PDF-Formel nicht lesbar umgewandelt werden kann
+LOESUNG_OVERRIDE = {
+    'kk-2024-sommer:7': """Die Amortisationszeit zeigt, nach welcher Zeit die Einsparungen die ursprünglichen Projektkosten ausgeglichen haben.
+
+> Amortisationszeit = Projektkosten ÷ monatliche Einsparung
+
+**Beispiel:**
+
+> 10.500 ÷ 2.716 ≈ 3,87 Monate
+
+Das Projekt amortisiert sich unter diesen Annahmen **im vierten Monat**.""",
 }

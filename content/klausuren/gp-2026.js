@@ -3,7 +3,7 @@
 // (Konverter: tools/import). Frage-ids nicht ändern.
 export default {
   id: 'gp-2026',
-  titel: '2026',
+  titel: 'Sommer 2026',
   bereich: 'gp',
   sortierung: 2026.0,
   quelle: 'Musterlösung',

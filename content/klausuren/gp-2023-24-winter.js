@@ -59,9 +59,7 @@ Das **Pflichtenheft** beschreibt, wie der Auftragnehmer diese Anforderungen konk
           art: 'anwenden',
           thema: 'projekt',
           frage: `Wie unterscheiden sich klassisches und agiles Projektmanagement? Nennen Sie drei Merkmale.`,
-          loesung: `**Klassisches**
-
-| Merkmal | Projektmanagement | Agiles Projektmanagement |
+          loesung: `| Merkmal | Klassisches Projektmanagement | Agiles Projektmanagement |
 |---|---|---|
 | **Planung** | Umfangreiche Planung zu Beginn | Planung wird schrittweise konkretisiert |
 | **Ablauf** | Häufig aufeinanderfolgende Projektphasen | Kurze Arbeitszyklen mit regelmäßigen Teilergebnissen |

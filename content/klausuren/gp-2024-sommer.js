@@ -482,9 +482,7 @@ In dieser Aufgabe:
 
 > Variable Stückkosten = Einstandspreis + variable Handlungskosten
 
-**Variable**
-
-| Model l | Nettoverkaufsprei s | Einstandsprei s | Handlungskoste n | Stückdeckungsbeitra g |
+| Modell | Nettoverkaufspreis | Einstandspreis | Variable Handlungskosten | Stückdeckungsbeitrag |
 |---|---|---|---|---|
 | **Berlin** | 700,00 € | 520,00 € | 80,00 € | **100,00 €** |
 | **Paris** | 750,00 € | 684,00 € | 100,00 € | **−34,00 €** |

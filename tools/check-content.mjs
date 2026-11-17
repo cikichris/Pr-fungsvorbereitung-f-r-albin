@@ -4,6 +4,7 @@
 //   node tools/check-content.mjs
 import { KLAUSUREN } from '../content/index.js';
 import { BEREICHE, THEMEN, TYPEN, ARTEN } from '../content/themen.js';
+import { FORMELN } from '../content/formeln.js';
 
 const errors = [];
 const warnings = [];
@@ -103,9 +104,20 @@ for (const k of KLAUSUREN) {
   }
 }
 
+const formelIds = new Set();
+for (const f of FORMELN) {
+  const w = `formeln.js/${f.id}`;
+  if (formelIds.has(f.id)) errors.push(`${w}: id doppelt`);
+  formelIds.add(f.id);
+  if (!bereiche.has(f.bereich)) errors.push(`${w}: unbekannter bereich "${f.bereich}"`);
+  if (!themen.has(f.thema)) errors.push(`${w}: unbekanntes thema "${f.thema}"`);
+  if (!isText(f.name)) errors.push(`${w}: name fehlt`);
+  if (!Array.isArray(f.zeilen) || !f.zeilen.length || !f.zeilen.every(isText)) errors.push(`${w}: zeilen fehlen`);
+}
+
 for (const w of warnings) console.warn(`Hinweis: ${w}`);
 if (errors.length) {
   console.error(`${errors.length} Fehler:\n${errors.map((e) => `  - ${e}`).join('\n')}`);
   process.exit(1);
 }
-console.log(`OK: ${counts.klausuren} Klausuren, ${counts.fragen} Fragen.`);
+console.log(`OK: ${counts.klausuren} Klausuren, ${counts.fragen} Fragen, ${FORMELN.length} Formeln.`);

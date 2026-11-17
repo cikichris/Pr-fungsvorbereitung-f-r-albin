@@ -8,6 +8,7 @@
 //    #/themen                Themen mit eigenem Stand
 //    #/themen/<id>           Fragen eines Themas
 //    #/wiederholen           falsch beantwortete Fragen
+//    #/formeln               Formelsammlung (Suche, Abfragemodus)
 //    #/analyse               Häufigkeit von Themen und Fragetypen
 //    #/daten                 Prüfungstermin, Sicherung, Zurücksetzen
 //    #/lernen                laufende Sitzung
@@ -21,6 +22,7 @@ import {
 import { grade, isAnswered, isTouched, rowCorrect, formatNumber, note, pts, hatPunkte } from './grade.js';
 import { analyse, progress } from './stats.js';
 import { fmt, esc, firstLine } from './render.js';
+import { FORMELN } from '../content/formeln.js';
 
 const view = document.getElementById('view');
 let timer = null;
@@ -703,7 +705,10 @@ function renderFach(id) {
     <div class="list">${ks.map((k) => klausurRow(k)).join('')}</div>
     <h2>Themen</h2>
     <div class="list">${themen.map(themaRow).join('')}</div>
-    <p class="center"><a class="btn btn-quiet" href="#/analyse" data-action="bereich" data-id="${id}" data-go="#/analyse">Was kommt wie oft dran?</a></p>`
+    <div class="action-row stack fach-links">
+      ${FORMELN.some((f) => f.bereich === id) ? `<a class="btn" href="#/formeln" data-action="bereich" data-id="${id}" data-go="#/formeln">Formelsammlung</a>` : ''}
+      <a class="btn" href="#/analyse" data-action="bereich" data-id="${id}" data-go="#/analyse">Was kommt wie oft dran?</a>
+    </div>`
     : '<p class="note">Für dieses Fach sind noch keine Klausuren eingepflegt.</p>'}
   </section>`);
 }
@@ -853,6 +858,59 @@ function renderWiederholen() {
       ${browseList(wrong)}`
     : '<p class="note">Nichts zu wiederholen. Alles, was du bisher bearbeitet hast, wusstest du zuletzt.</p>'}
   </section>`);
+}
+
+// ---------------------------------------------------------------------
+//  Formeln
+// ---------------------------------------------------------------------
+
+let formelnVerdeckt = false;
+try { formelnVerdeckt = localStorage.getItem('formeln-verdeckt') === '1'; } catch { /* egal */ }
+
+function renderFormeln() {
+  const list = FORMELN.filter((f) => !bereichFilter || f.bereich === bereichFilter);
+  const reihenfolge = new Map([...themaById.keys()].map((id, i) => [id, i]));
+  const gruppen = new Map();
+  for (const f of list) gruppen.set(f.thema, [...(gruppen.get(f.thema) || []), f]);
+  const sortiert = [...gruppen.entries()].sort((a, b) => (reihenfolge.get(a[0]) ?? 99) - (reihenfolge.get(b[0]) ?? 99));
+  show(`<section class="formeln${formelnVerdeckt ? ' is-verdeckt' : ''}">
+    <header class="page-head">
+      <h1>Formeln</h1>
+      <p class="muted">Das Formelblatt für Geschäftsprozesse und die Formeln aus den Musterlösungen für Kundenkommunikation, nach Thema geordnet.</p>
+    </header>
+    ${bereichChips()}
+    <div class="formel-tools">
+      <label class="sr-only" for="formelsuche">Formel suchen</label>
+      <input type="search" id="formelsuche" data-input="formelsuche" placeholder="Suchen, z. B. Deckungsbeitrag" autocomplete="off">
+      <button class="btn${formelnVerdeckt ? ' btn-primary' : ''}" data-action="formeln-verdecken" aria-pressed="${formelnVerdeckt}">${formelnVerdeckt ? 'Alle zeigen' : 'Abfragen'}</button>
+    </div>
+    ${formelnVerdeckt ? '<p class="muted small">Abfragemodus: Überleg dir die Formel und tippe dann auf die Karte.</p>' : ''}
+    ${sortiert.map(([thema, fs]) => `<section class="formel-gruppe">
+      <h2><span>${esc(themaName(thema))}</span><a class="small" href="#/themen/${thema}">Fragen ›</a></h2>
+      ${fs.map((f) => `<div class="formel" data-action="formel-zeigen" data-suche="${esc(`${f.name} ${f.zeilen.join(' ')}`.toLowerCase())}">
+        <p class="formel-name">${esc(f.name)}</p>
+        <div class="formel-body">${fmt(f.zeilen.map((z) => `> ${z}`).join('\n'))}${f.quelle ? `<p class="formel-quelle">Aus den Musterlösungen: ${esc(f.quelle)}</p>` : ''}</div>
+        <p class="formel-hint">Antippen zum Aufdecken</p>
+      </div>`).join('')}
+    </section>`).join('')}
+    <p class="note formel-leer" hidden>Keine Formel gefunden.</p>
+  </section>`);
+}
+
+function filterFormeln(text) {
+  const q = text.trim().toLowerCase();
+  let treffer = 0;
+  view.querySelectorAll('.formel-gruppe').forEach((g) => {
+    let sichtbar = 0;
+    g.querySelectorAll('.formel').forEach((f) => {
+      const ok = !q || f.dataset.suche.includes(q);
+      f.hidden = !ok;
+      if (ok) sichtbar += 1;
+    });
+    g.hidden = !sichtbar;
+    treffer += sichtbar;
+  });
+  view.querySelector('.formel-leer').hidden = treffer > 0;
 }
 
 // ---------------------------------------------------------------------
@@ -1076,6 +1134,16 @@ const actions = {
     const ids = r.qids.filter((id) => (r.scores[id] ?? 0) < 1 && frageById.has(id));
     startSession({ kind: 'wdh', mode: 'ueben', titel: `Falsche aus: ${r.titel}`, qids: ids, back: `#/ergebnis/${r.id}` });
   },
+  'formeln-verdecken'() {
+    formelnVerdeckt = !formelnVerdeckt;
+    try { localStorage.setItem('formeln-verdeckt', formelnVerdeckt ? '1' : '0'); } catch { /* egal */ }
+    const suche = view.querySelector('[data-input="formelsuche"]')?.value || '';
+    renderFormeln();
+    if (suche) { view.querySelector('[data-input="formelsuche"]').value = suche; filterFormeln(suche); }
+  },
+  'formel-zeigen'(el) {
+    if (formelnVerdeckt) el.classList.toggle('is-offen');
+  },
   reset() {
     if (!confirm('Wirklich den kompletten Lernstand löschen? Das lässt sich nur mit einer Sicherung rückgängig machen.')) return;
     store.resetAll();
@@ -1157,6 +1225,7 @@ view.addEventListener('toggle', (e) => {
 view.addEventListener('input', (e) => {
   const el = e.target;
   const kind = el.dataset?.input;
+  if (kind === 'formelsuche') { filterFormeln(el.value); return; }
   if (kind === 'zahl' || kind === 'offen') {
     const s = store.active();
     const q = currentQ(s);
@@ -1221,7 +1290,7 @@ view.addEventListener('submit', (e) => {
 //  Navigation
 // ---------------------------------------------------------------------
 
-const TAB_FOR = { '': '', fach: '', klausuren: 'klausuren', ergebnis: 'klausuren', themen: 'themen', wiederholen: 'themen', analyse: 'analyse', daten: 'daten' };
+const TAB_FOR = { '': '', fach: '', klausuren: 'klausuren', ergebnis: 'klausuren', themen: 'themen', wiederholen: 'themen', formeln: 'formeln', analyse: 'analyse', daten: 'daten' };
 
 function route() {
   clearInterval(timer);
@@ -1240,6 +1309,7 @@ function route() {
     case 'klausuren': if (arg) renderKlausurSetup(arg); else renderKlausuren(); break;
     case 'themen': if (arg) renderThema(arg); else renderThemen(); break;
     case 'wiederholen': renderWiederholen(); break;
+    case 'formeln': renderFormeln(); break;
     case 'analyse': renderAnalyse(); break;
     case 'daten': renderDaten(); break;
     case 'lernen': renderSession(); break;

@@ -125,7 +125,7 @@ legend { padding: 0; font-weight: 700; font-size: 0.8rem; letter-spacing: 0.05em
   gap: 2px;
   color: var(--muted);
   text-decoration: none;
-  font-size: 0.68rem;
+  font-size: 0.64rem;
   font-weight: 600;
   min-width: 0;
 }
@@ -316,7 +316,7 @@ fieldset:disabled { opacity: 0.5; }
 .inline-field { display: flex; align-items: center; gap: 0.6rem; margin: 0.3rem 0 0 2.1rem; font-weight: 600; font-size: 0.92rem; }
 .inline-field input { width: 6rem; }
 
-input[type="date"], input[type="number"], input[type="text"], textarea {
+input[type="date"], input[type="number"], input[type="text"], input[type="search"], textarea {
   width: 100%;
   min-height: 46px;
   padding: 0.55rem 0.8rem;
@@ -534,6 +534,25 @@ td.is-num, th.is-num { text-align: right; font-variant-numeric: tabular-nums; wh
 .browse-text { flex-basis: 100%; font-weight: 600; overflow-wrap: anywhere; }
 .browse-body { padding: 0 0.5rem 0.5rem; }
 .browse-body .question { border: 0; padding: 0.4rem 0.4rem 0.6rem; }
+
+/* ---------- Formeln ---------- */
+
+.formel-tools { display: flex; gap: 0.5rem; margin-bottom: 0.6rem; }
+.formel-tools input { flex: 1; min-width: 0; -webkit-appearance: none; appearance: none; }
+.formel-tools .btn { flex: none; }
+.formel-gruppe h2 { display: flex; align-items: baseline; justify-content: space-between; gap: 0.8rem; }
+.formel-gruppe h2 a { font-weight: 600; text-decoration: none; white-space: nowrap; }
+.formel-gruppe > .formel + .formel { margin-top: 0.5rem; }
+.formel { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 0.75rem 0.9rem; }
+.formel-name { font-weight: 700; }
+.formel-body .calc { margin-top: 0.45rem; }
+.formel-quelle { margin-top: 0.4rem; font-size: 0.78rem; color: var(--muted); }
+.formel-hint { display: none; margin-top: 0.3rem; font-size: 0.84rem; color: var(--accent); font-weight: 600; }
+.is-verdeckt .formel { cursor: pointer; }
+.is-verdeckt .formel:not(.is-offen) .formel-body { display: none; }
+.is-verdeckt .formel:not(.is-offen) .formel-hint { display: block; }
+.is-verdeckt .formel.is-offen { border-color: var(--accent); }
+.fach-links { margin-top: 1.5rem; }
 
 /* ---------- Analyse und Ergebnis ---------- */
 

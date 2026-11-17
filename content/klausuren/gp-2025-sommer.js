@@ -394,9 +394,7 @@ Auch **YouTube** lässt sich begründen, wenn ausführliche Produktinformationen
           art: 'auswahl',
           thema: 'werbekennzahlen',
           frage: `Welche Abrechnungsmodelle fördern eher Quantität und welche eher Qualität?`,
-          loesung: `**Interesse nach**
-
-| Modell | Bedeutung | Prüfungslogik |
+          loesung: `| Modell | Bedeutung | Interesse nach Prüfungslogik |
 |---|---|---|
 | **CPC** | Cost per Click – Vergütung je Klick | **Quantität: 1** |
 | **CPL** | Cost per Lead – Vergütung je Interessentenkontakt | **Qualität: 2** |
@@ -467,7 +465,7 @@ Auch **YouTube** lässt sich begründen, wenn ausführliche Produktinformationen
 - Nettoverkaufspreis: 40,00 € je Packung
 - Variable Kosten: 15,00 € je Packung
 - Fixkosten: 800,00 €
-- \\(x\\) = Anzahl der Packungen`,
+- x = Anzahl der Packungen`,
           loesung: `**Kostenfunktion:**
 
 > Gesamtkosten = Fixkosten + variable Stückkosten × Menge
