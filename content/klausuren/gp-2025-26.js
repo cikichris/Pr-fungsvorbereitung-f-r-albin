@@ -3,7 +3,7 @@
 // (Konverter: tools/import). Frage-ids nicht ändern.
 export default {
   id: 'gp-2025-26',
-  titel: '2025/26',
+  titel: 'Winter 2025/26',
   bereich: 'gp',
   sortierung: 2025.5,
   quelle: 'Musterlösung',
@@ -306,9 +306,7 @@ Der angegebene Bezugspreis von 4.800,00 € wird hier nicht zusätzlich abgezoge
           frage: `Welche Instrumente eignen sich zur Sortimentsanalyse?`,
           loesung: `**Gesuchte Zuordnung:**
 
-**Geeignetes**
-
-| Erkenntnisziel | Instrument | Lösungsziffer |
+| Erkenntnisziel | Geeignetes Instrument | Lösungsziffer |
 |---|---|---|
 | Top-Seller-Produkte erkennen | **ABC-Analyse** | **4** |
 | Sortimentsbereiche mit besonderem Marktpotenzial erkennen | **Portfolioanalyse** | **1** |

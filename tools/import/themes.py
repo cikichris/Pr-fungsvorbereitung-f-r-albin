@@ -33,7 +33,7 @@ def thema(frage, loesung):
 
 
 AUSWAHL = re.compile(r'(Auswahl|Antworten?)\b[^.\n]{0,40}\d|Lösungs(folge|reihenfolge)|Erwartete Auswahl|Gesuchte (Auswahl|Antwort)|Antwort \d+ (als richtig|erwartet)|wird Antwort \d')
-RECHNEN = re.compile(r'berechne|Wie hoch|Wie viel|Ab welche|Nach wie vielen|Wie weit darf|Auf welchen Betrag|ermittelt man|ermittelt|Gewinnschwellenmenge|Wie stellt man|Wie zeichnet man|Mit welcher Formel|Ist die interne oder externe|Gewinn je')
+RECHNEN = re.compile(r'berechne|Wie hoch|Wie viel|Ab welche|Nach wie vielen|Wie weit darf|Auf welchen Betrag|\bermittelt|Gewinnschwellenmenge|Wie stellt man|Wie zeichnet man|Mit welcher Formel|Ist die interne oder externe|Gewinn je')
 ERKLAEREN = re.compile(r'^(Was (ist|sind|bedeutet|bedeuten|versteht|bezeichnet|sagt|kennzeichnet|unterscheidet|beschreibt)|Wofür steht|Wozu dien|Welchen (wesentlichen )?Zweck)')
 
 

@@ -1,6 +1,7 @@
-"""Erzeugt content/klausuren/gp-*.js aus den geparsten Musterlösungen.
+"""Erzeugt content/klausuren/<fach>-*.js aus den geparsten Musterlösungen.
 
-Aufruf: python3 -I gen.py <json-ordner> <repo> [--review]
+Aufruf: python3 -I gen.py <fach> <json-ordner> <repo> [--review]
+        fach: gp (Geschäftsprozesse) oder kk (Kundenkommunikation)
 """
 import json
 import os
@@ -8,36 +9,62 @@ import re
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from themes import thema, art  # noqa: E402
-from overrides import THEMA_OVERRIDE, BILDER  # noqa: E402
+import themes  # noqa: E402
+import themes_kk  # noqa: E402
+from overrides import THEMA_OVERRIDE, BILDER, LOESUNG_OVERRIDE  # noqa: E402
 
-SRC, REPO = sys.argv[1], sys.argv[2]
+FACH, SRC, REPO = sys.argv[1], sys.argv[2], sys.argv[3]
 REVIEW = '--review' in sys.argv
 
-FILES = [
-    # Datei, id, Titel, Sortierschlüssel
-    ('AP2_GP_2020', 'gp-2020-sommer', 'Sommer 2020', 2020.0),
-    ('AP2_GP_2020-21', 'gp-2020-21-winter', 'Winter 2020/21', 2020.5),
-    ('AP2_GP_2021', 'gp-2021-sommer', 'Sommer 2021', 2021.0),
-    ('AP2_GP_2021-22', 'gp-2021-22-winter', 'Winter 2021/22', 2021.5),
-    ('AP2_GP_2022', 'gp-2022-sommer', 'Sommer 2022', 2022.0),
-    ('AP2_GP_2022-23', 'gp-2022-23-winter', 'Winter 2022/23', 2022.5),
-    ('AP2_GP_2023', 'gp-2023-sommer', 'Sommer 2023', 2023.0),
-    ('AP2_GP_2023-24', 'gp-2023-24-winter', 'Winter 2023/24', 2023.5),
-    ('AP2_GP_2024', 'gp-2024-sommer', 'Sommer 2024', 2024.0),
-    ('AP2_GP_2024-25', 'gp-2024-25-winter', 'Winter 2024/25', 2024.5),
-    ('AP2_GP_2025', 'gp-2025-sommer', 'Sommer 2025', 2025.0),
-    ('AP2_GP_2025-26', 'gp-2025-26', '2025/26', 2025.5),
-    ('AP2_GP_2026', 'gp-2026', '2026', 2026.0),
+# Datei, id, Titel, Sortierschlüssel (Sommer = Jahr, Winter = Jahr + 0,5)
+TERMINE = [
+    ('2020', '2020-sommer', 'Sommer 2020', 2020.0),
+    ('2020-21', '2020-21-winter', 'Winter 2020/21', 2020.5),
+    ('2021', '2021-sommer', 'Sommer 2021', 2021.0),
+    ('2021-22', '2021-22-winter', 'Winter 2021/22', 2021.5),
+    ('2022', '2022-sommer', 'Sommer 2022', 2022.0),
+    ('2022-23', '2022-23-winter', 'Winter 2022/23', 2022.5),
+    ('2023', '2023-sommer', 'Sommer 2023', 2023.0),
+    ('2023-24', '2023-24-winter', 'Winter 2023/24', 2023.5),
+    ('2024', '2024-sommer', 'Sommer 2024', 2024.0),
+    ('2024-25', '2024-25-winter', 'Winter 2024/25', 2024.5),
+    ('2025', '2025-sommer', 'Sommer 2025', 2025.0),
+    ('2025-26', '2025-26', 'Winter 2025/26', 2025.5),
+    ('2026', '2026', 'Sommer 2026', 2026.0),
 ]
+FAECHER = {
+    'gp': ('AP2_GP_', themes.thema),
+    'kk': ('AP2_Kundenkommunikation_', themes_kk.thema),
+}
+PREFIX, THEMA = FAECHER[FACH]
+FILES = [(PREFIX + datei, f'{FACH}-{kid}', titel, sort) for datei, kid, titel, sort in TERMINE]
+art = themes.art
 
 CALC = re.compile(r'[=÷×≈]')
 
 
+def latex_plain(s):
+    """LaTeX-Quelltext, der als Text im PDF steht, lesbar machen."""
+    if '\\' not in s:
+        return s
+    s = re.sub(r'\\text\{([^{}]*)\}', r'\1', s)
+    for _ in range(3):
+        s = re.sub(r'\\frac\s*\{([^{}]*)\}\s*\{([^{}]*)\}', r'\1 ÷ \2', s)
+    s = s.replace('\\[', '').replace('\\]', '').replace('\\(', '').replace('\\)', '').replace('\\times', '×').replace('\\cdot', '·')
+    s = s.replace('\\,\\%', ' %').replace('\\,', '').replace('\\%', '%').replace('\\approx', '≈')
+    return re.sub(r'\s+', ' ', s).strip()
+
+
+def spaced(line):
+    """Leerzeichen um Rechenzeichen in Formeln: '9 %−1 %' -> '9 % − 1 %'."""
+    return re.sub(r'(?<=[\w%)€])([−=×÷≈+])(?=[\w(€])', r' \1 ', line)
+
+
 def para_md(lines):
+    lines = [latex_plain(l) for l in lines]
     # Rechnungen und Formeln (ohne einleitendes fettes Stichwort) als Rechenblock
     if all(CALC.search(l) for l in lines) and not lines[0].startswith('**') and all(len(l) < 140 for l in lines):
-        return '\n'.join('> ' + l for l in lines)
+        return '\n'.join('> ' + spaced(l) for l in lines)
     return '\n'.join(lines)
 
 
@@ -46,7 +73,14 @@ def blocks_md(blocks, file_id):
     lst = None
     for b in blocks:
         if b['t'] == 'li':
-            item = ('1. ' if b['ordered'] else '- ') + b['text'].replace('\n', ' ')
+            text = latex_plain(b['text']) if '\\' in b['text'] else b['text']
+            if '\n' in text:
+                first, rest = text.split('\n', 1)
+                # "**Überschrift**\nErläuterung" -> "**Überschrift:** Erläuterung"
+                if re.fullmatch(r'\*\*[^*]+\*\*', first) and not re.search(r'[.:!?]\*\*$', first):
+                    first = first[:-2] + ':**'
+                text = first + ' ' + rest.replace('\n', ' ')
+            item = ('1. ' if b['ordered'] else '- ') + text
             if lst is not None and lst[0] == b['ordered']:
                 lst[1].append(item)
                 continue
@@ -87,6 +121,14 @@ def split_given(blocks):
     return blocks[:i], blocks[i:]
 
 
+def split_antwort(blocks):
+    """Format mit 'Situation: … Antwort: …': alles vor 'Antwort:' gehört zur Frage."""
+    for i, b in enumerate(blocks):
+        if b['t'] == 'p' and b['lines'][0].replace('*', '').strip() == 'Antwort:':
+            return blocks[:i], blocks[i + 1:]
+    return None
+
+
 def js_str(s):
     s = s.replace('\\', '\\\\').replace('`', '\\`').replace('${', '\\${')
     return '`' + s + '`'
@@ -98,13 +140,13 @@ def main():
         data = json.load(open(os.path.join(SRC, fname + '.json'), encoding='utf-8'))
         fragen = []
         for q in data['fragen']:
-            given, rest = split_given(q['blocks'])
+            given, rest = split_antwort(q['blocks']) or split_given(q['blocks'])
             frage = q['frage']
             if given:
                 frage = frage + '\n\n' + blocks_md(given, fname)
-            loesung = blocks_md(rest, fname)
+            loesung = LOESUNG_OVERRIDE.get(f"{FACH}-{dict((d, k) for d, k, _, _ in TERMINE)[fname[len(PREFIX):]]}:{q['num']}") or blocks_md(rest, fname)
             nr = q['ref'] or str(q['num'])
-            t = THEMA_OVERRIDE.get(f"{kid}:{q['num']}") or thema(q['frage'], loesung)
+            t = THEMA_OVERRIDE.get(f"{kid}:{q['num']}") or THEMA(q['frage'], loesung)
             if not t:
                 if not REVIEW:
                     raise SystemExit(f'Kein Thema: {kid}:{q["num"]} {q["frage"]}')
@@ -129,13 +171,17 @@ def main():
             'export default {',
             f"  id: '{kid}',",
             f"  titel: '{titel}',",
-            "  bereich: 'gp',",
+            f"  bereich: '{FACH}',",
             f"  sortierung: {sort},",
             "  quelle: 'Musterlösung',",
             '  aufgaben: [',
         ]
+        abschnitte = data.get('abschnitte') or {}
         for haupt, fs in bloecke:
-            lines += ['    {', f"      nr: '{haupt}',", '      fragen: [']
+            lines += ['    {', f"      nr: '{haupt}',"]
+            if haupt in abschnitte:
+                lines.append(f"      titel: {js_str(abschnitte[haupt])},")
+            lines.append('      fragen: [')
             for f in fs:
                 lines.append('        {')
                 lines.append(f"          id: '{f['id']}',")

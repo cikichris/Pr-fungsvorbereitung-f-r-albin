@@ -83,13 +83,9 @@ export default {
           art: 'anwenden',
           thema: 'projekt',
           frage: `Welche Chancen und Risiken haben interne und externe Projektrealisierung?`,
-          loesung: `**Interne Umsetzung Externe Umsetzung**
-
-Mitarbeiter kennen die betrieblichen Ein spezialisierter Dienstleister bringt
-
-|  |  |  |
+          loesung: `|  | Interne Umsetzung | Externe Umsetzung |
 |---|---|---|
-| **Chance** | Abläufe und können Anforderungen gezielt berücksichtigen. | Erfahrung und technisches Fachwissen ein. |
+| **Chance** | Mitarbeiter kennen die betrieblichen Abläufe und können Anforderungen gezielt berücksichtigen. | Ein spezialisierter Dienstleister bringt Erfahrung und technisches Fachwissen ein. |
 | **Risiko** | Fehlende Fachkenntnisse oder begrenzte Kapazitäten können das Projekt verzögern. | Es entsteht eine Abhängigkeit vom Dienstleister, beispielsweise bei Änderungen oder Wartung. |
 
 **Merksatz:** Eine Make-or-Buy-Entscheidung berücksichtigt neben Kosten auch Qualität, Wissen, Kapazitäten und Abhängigkeiten.`,

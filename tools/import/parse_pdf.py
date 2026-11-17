@@ -106,7 +106,12 @@ def cell_text(words):
             lines.append([w])
     text = ''
     for ln in lines:
-        text = join_md(text, words_to_md(sorted(ln, key=lambda w: w['x0'])))
+        part = words_to_md(sorted(ln, key=lambda w: w['x0']))
+        # Word bricht in schmalen Spalten mitten im Wort um: "Nettoverkaufsprei" + "s"
+        if text and re.fullmatch(r'(\*\*)?[a-zäöüß](\*\*)?', part) and re.search(r'[a-zäöüß](\*\*)?$', text):
+            text = re.sub(r'\*\*$', '', text) + re.sub(r'^\*\*', '', part) if text.endswith('**') and part.startswith('**') else text + part
+            continue
+        text = join_md(text, part)
     return text
 
 
@@ -187,6 +192,10 @@ def parse(path):
         return abs(x - ref) < tol
 
     questions = []
+    sections = {}
+    # Format mit Aufgabennummer vorne ("1.2.1 Frage …") statt "N. Frage (1.2.1)"
+    alt = any(l['kind'] == 'text' and at(l['x0'], margin) and is_bold(l['words'][0])
+              and re.fullmatch(r'\d+(\.\d+)+', l['words'][0]['text']) for l in lines)
     cur = None
     expected = 1
     i = 0
@@ -198,9 +207,17 @@ def parse(path):
 
     while i < n:
         l = lines[i]
-        # Fragenkopf
-        if (l['kind'] == 'text' and at(l['x0'], margin) and is_bold(l['words'][0])
-                and re.fullmatch(r'\d+\.', first_text(l)) and int(first_text(l)[:-1]) == expected):
+        bold_margin = l['kind'] == 'text' and at(l['x0'], margin) and is_bold(l['words'][0])
+        # Abschnitt (nur im Format mit Aufgabennummer vorne): "1. Verträge abwickeln"
+        nxt = next((x for x in lines[i + 1:] if x['kind'] == 'text'), None)
+        if (alt and bold_margin and re.fullmatch(r'\d+\.', first_text(l)) and nxt is not None
+                and is_bold(nxt['words'][0]) and re.fullmatch(r'\d+(\.\d+)+', nxt['words'][0]['text'])):
+            sections[first_text(l)[:-1]] = words_to_md(l['words'][1:]).replace('**', '').strip()
+            i += 1
+            continue
+        # Fragenkopf: "N. Frage (1.2)" oder im anderen Format "1.2.1 Frage"
+        alt_head = alt and bold_margin and re.fullmatch(r'\d+(\.\d+)+', first_text(l))
+        if alt_head or (bold_margin and re.fullmatch(r'\d+\.', first_text(l)) and int(first_text(l)[:-1]) == expected):
             head = words_to_md(l['words'][1:])
             last_y = l['y']
             i += 1
@@ -215,6 +232,8 @@ def parse(path):
             ref = m.group(1) if m else None
             if m:
                 head = head[:m.start()].strip()
+            if alt_head:
+                ref = first_text(l)
             cur = {'num': expected, 'ref': ref, 'frage': head, 'blocks': []}
             questions.append(cur)
             expected += 1
@@ -246,7 +265,20 @@ def parse(path):
             blocks.append({'t': 'li', 'ordered': ordered, 'text': text})
             continue
         # Tabelle: Zellen beginnen leicht eingerückt (Zellenabstand)
-        if margin + 1.5 < l['x0'] < margin + 5:
+        in_table = lambda x: margin + 1.5 < x['x0'] < margin + 5  # noqa: E731
+        # zweizeilige Kopfzelle, die über der ersten Tabellenzeile beginnt
+        head_above = False
+        if l['x0'] > margin + 5 and fw['text'] != '•' and not re.fullmatch(r'\d+\.', fw['text']):
+            j, prev_y = i + 1, l['y']
+            while j < n and lines[j]['kind'] == 'text' and lines[j]['y'] - prev_y < 32 and j - i < 6:
+                if in_table(lines[j]):
+                    head_above = True
+                    break
+                if at(lines[j]['x0'], margin) or lines[j]['words'][0]['text'] == '•':
+                    break
+                prev_y = lines[j]['y']
+                j += 1
+        if in_table(l) or head_above:
             rows = [[l]]
             last_y = l['y']
             i += 1
@@ -283,7 +315,7 @@ def parse(path):
             last_y = lines[i]['y']
             i += 1
         blocks.append({'t': 'p', 'lines': lines_in_para, 'x': round(start_x - margin, 1)})
-    return {'titel': title, 'fragen': questions}
+    return {'titel': title, 'fragen': questions, 'abschnitte': sections}
 
 
 if __name__ == '__main__':

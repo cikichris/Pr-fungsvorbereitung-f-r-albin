@@ -30,6 +30,18 @@ export const THEMEN = [
   { id: 'analyse', name: 'Marktforschung und Analyseinstrumente' },
   { id: 'projekt', name: 'Projektmanagement' },
   { id: 'recht', name: 'Recht im E-Commerce' },
+  // Kundenkommunikation im E-Commerce
+  { id: 'kaufvertrag', name: 'Kaufvertrag und Vertragsarten' },
+  { id: 'stoerungen', name: 'Lieferverzug und Annahmeverzug' },
+  { id: 'maengel', name: 'Mangelhafte Lieferung und Gewährleistung' },
+  { id: 'zahlung', name: 'Rechnung, Zahlungsverzug und Mahnwesen' },
+  { id: 'retouren', name: 'Widerruf und Retourenmanagement' },
+  { id: 'beschwerde', name: 'Reklamations- und Beschwerdemanagement' },
+  { id: 'kommunikation', name: 'Kommunikationsmodelle und Gesprächsführung' },
+  { id: 'kanaele', name: 'Servicekanäle: Chat, FAQ, E-Mail, Telefon' },
+  { id: 'socialservice', name: 'Social Media im Kundenservice' },
+  { id: 'kundenbindung', name: 'Kundenbindung, CRM und Befragungen' },
+  { id: 'servicekennzahlen', name: 'Ziele und Kennzahlen im Kundenservice' },
 ];
 
 /** Wie die Frage in der Prüfung gestellt war (Feld art). */
