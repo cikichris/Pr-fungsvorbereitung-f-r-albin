@@ -1,0 +1,5 @@
+# Original-PDFs nicht veröffentlichen
+*.pdf
+.DS_Store
+node_modules/
+__pycache__/
